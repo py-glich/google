@@ -1,65 +1,59 @@
 import streamlit as st
+import os
 import time
 import openai
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
-st.set_page_config(page_title="Google Meet Assistant", layout="wide")
-st.title("🌌 Google Meet Assistant")
+# ✅ Your OpenAI API Key
+openai.api_key = "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"
 
-# ------------------------------
-# 🔹 User Input
-# ------------------------------
-meet_code = st.text_input("Enter Google Meet code (e.g., abc-defg-hij)")
+# ✅ Path to chromedriver.exe (same folder as app.py)
+DRIVER_PATH = os.path.join(os.path.dirname(__file__), "chromedriver.exe")
 
-# ------------------------------
-# 🔹 Join Meeting
-# ------------------------------
-if st.button("Join Meeting"):
-    if not meet_code:
-        st.error("Please enter a meeting code first!")
-    else:
-        try:
-            # ✅ Chromium path (works on Streamlit Cloud)
-            chrome_path = "/usr/bin/chromium"
-            driver_path = "/usr/bin/chromedriver"
-
-            options = webdriver.ChromeOptions()
-            options.binary_location = chrome_path
-            options.add_argument("--headless=new")  # run headless on cloud
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--use-fake-ui-for-media-stream")
-            options.add_argument("--mute-audio")
-
-            service = Service(driver_path)
-            driver = webdriver.Chrome(service=service, options=options)
-
-            meet_url = f"https://meet.google.com/{meet_code}"
-            st.write(f"🔗 Opening: {meet_url}")
-            driver.get(meet_url)
-
-            time.sleep(5)
-            st.success("✅ Google Meet opened in Chromium!")
-
-        except Exception as e:
-            st.error(f"❌ Failed to open meeting: {e}")
-
-# ------------------------------
-# 🔹 OpenAI Setup
-# ------------------------------
-openai.api_key = "sk-your_api_key_here"  # replace with your key
-
-def ask_ai(question):
+# --------------------------
+# 🔹 Function to join Google Meet
+# --------------------------
+def open_meet(meet_code):
     try:
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": question}]
-        )
-        return response.choices[0].message["content"].strip()
+        chrome_options = Options()
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--start-maximized")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+
+        # ✅ Use local chromedriver.exe
+        service = Service(DRIVER_PATH)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        driver.get(f"https://meet.google.com/{meet_code}")
+        return driver
     except Exception as e:
-        return f"🚨 API Error: {str(e)}"
+        st.error(f"❌ Failed to open meeting: {e}")
+        return None
+
+# --------------------------
+# 🔹 Streamlit UI
+# --------------------------
+st.set_page_config(page_title="Google Meet Assistant", layout="centered")
+
+st.title("🤖 Google Meet Assistant")
+
+meet_code = st.text_input("Enter Google Meet code (e.g., abc-defg-hij):")
+
+if st.button("Join Meeting"):
+    if meet_code.strip():
+        driver = open_meet(meet_code.strip())
+        if driver:
+            st.success("✅ Google Meet opened successfully!")
+        else:
+            st.error("⚠️ Could not join the meeting.")
+    else:
+        st.warning("Please enter a valid Google Meet code.")
+
+
 
 
 
