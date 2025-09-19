@@ -1,12 +1,9 @@
 import streamlit as st
 import time
 import openai
-import chromedriver_autoinstaller
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-
-# ✅ Auto install ChromeDriver
-chromedriver_autoinstaller.install()
 
 st.set_page_config(page_title="Google Meet Assistant", layout="wide")
 st.title("🌌 Google Meet Assistant")
@@ -24,22 +21,27 @@ if st.button("Join Meeting"):
         st.error("Please enter a meeting code first!")
     else:
         try:
-            # ✅ Chrome options
+            # ✅ Chromium path (works on Streamlit Cloud)
+            chrome_path = "/usr/bin/chromium"
+            driver_path = "/usr/bin/chromedriver"
+
             options = webdriver.ChromeOptions()
+            options.binary_location = chrome_path
+            options.add_argument("--headless=new")  # run headless on cloud
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--use-fake-ui-for-media-stream")
-            options.add_argument("--disable-infobars")
-            options.add_argument("--disable-extensions")
             options.add_argument("--mute-audio")
 
-            # ✅ Launch Chrome
-            driver = webdriver.Chrome(options=options)
+            service = Service(driver_path)
+            driver = webdriver.Chrome(service=service, options=options)
 
             meet_url = f"https://meet.google.com/{meet_code}"
             st.write(f"🔗 Opening: {meet_url}")
             driver.get(meet_url)
 
             time.sleep(5)
-            st.success("✅ Chrome opened Google Meet!")
+            st.success("✅ Google Meet opened in Chromium!")
 
         except Exception as e:
             st.error(f"❌ Failed to open meeting: {e}")
@@ -47,7 +49,7 @@ if st.button("Join Meeting"):
 # ------------------------------
 # 🔹 OpenAI Setup
 # ------------------------------
-openai.api_key = "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"  # replace with your key
+openai.api_key = "sk-your_api_key_here"  # replace with your key
 
 def ask_ai(question):
     try:
@@ -58,5 +60,7 @@ def ask_ai(question):
         return response.choices[0].message["content"].strip()
     except Exception as e:
         return f"🚨 API Error: {str(e)}"
+
+
 
 
